@@ -7,18 +7,23 @@ Created on Fri Jan 22 19:38:04 2021
 @author: jtomfarrar
 jfarrar@whoi.edu
 """
+# %%
 import os
 # I need this to make basemap work
-os.environ['PROJ_LIB'] = r'C:\Users\jtomf\anaconda3\pkgs\cartopy-0.18.0-py38h2a8b5ed_8\Lib\site-packages\cartopy'
+#os.environ['PROJ_LIB'] = r'C:\Users\jtomf\anaconda3\pkgs\cartopy-0.18.0-py38h2a8b5ed_8\Lib\site-packages\cartopy'
 from mpl_toolkits.basemap import Basemap
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mplt
-import nc_time_axis
+#import nc_time_axis
 import xarray as xr
 import glob
-
-site_name = 'Jan_Mayan'#'Lofoten_Basin'#'Jan_Mayan'#'NORSE' #can be 'NTAS', 'WHOTS', 'Stratus', or 'Papa'
+# %%
+# change to the directory where this script is located
+home_dir = os.path.expanduser("~")
+os.chdir(home_dir+'/Python/ERA5_plots_2024/src')
+# %%
+site_name = 'NORSE2023'#'Lofoten_Basin'#'Jan_Mayan'#'NORSE' #can be 'NTAS', 'WHOTS', 'Stratus', or 'Papa'
 
 if site_name=='WHOTS':
     lon_pt = -158 # WHOTS=-158
@@ -38,22 +43,30 @@ elif site_name=='Lofoten_Basin':
 elif site_name=='Jan_Mayan':
     lon_pt = -8.1 #3
     lat_pt = 71 #70
+elif site_name=='Jan_Mayan':
+    lon_pt = -8.1 #3
+    lat_pt = 71 #70
+elif site_name=='NORSE2023':
+    lon_pt = -6.1 #3
+    lat_pt = 71 #70
 
-__figdir__ = './figs/' + site_name
+# %%
+__figdir__ = '../img/' + site_name
 savefig_args = {'bbox_inches':'tight', 'pad_inches':0.2}
 
 #Define path using the r prefix (which means raw string so that special character / should not be evaluated)
-path = r"C:\Users\jtomf\Documents\Python\ERA5_plots"
+path = r"./"
 
+# %%
 # Get a list of all relevant .nc files
-if site_name=='Jan_Mayan':
-    filenames = glob.glob(path+'/ERA5_surface_NORSE_*.nc')
-elif site_name=='Lofoten_Basin':
-    filenames = glob.glob(path+'/ERA5_surface_NORSE_*.nc')
+site_name = 'NORSE'
+filenames = glob.glob(path+'/ERA5_surface_'+ site_name +'_*.nc')
+if len(filenames)==1:
+    ERA = xr.open_dataset(filenames[0])
 else:
-    filenames = glob.glob(path+'/ERA5_surface_'+ site_name +'_*.nc')
-    
-ERA = xr.open_mfdataset(filenames,combine='nested',concat_dim='time')
+    ERA = xr.open_mfdataset(filenames,combine='nested',concat_dim='time')
+
+# %%
 time = ERA.time  # 'days since 1950-01-01 00:00:00'
 
 tind = 0
@@ -151,7 +164,7 @@ axs[wnd].legend(['Wind speed'])
 axs[wnd].title.set_text('Met summary near ' +site_name + ' ('+ str(round(float(lat[ffy]),4)) + '$^\circ$N, ' + str(round(float(lon[ffx]),4)) + '$^\circ$E)')
 plt.tight_layout()
 
-ff=np.where((time>np.datetime64('2008-07-01')) & (time<np.datetime64('2008-12-01')))
+ff=np.where((time>np.datetime64('2023-07-01')) & (time<np.datetime64('2023-12-31')))
 for ax in axs:
     ax.set_xlim(time[ff[0][0]],time[ff[0][-1]])
 ax.xaxis.set_major_locator(mplt.dates.MonthLocator()) 
