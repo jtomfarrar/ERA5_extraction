@@ -26,7 +26,7 @@ import Tom_tools_v1 as tt
 
 # N, W, S, E valid range is 90, -180, -90, 180
 # could use lon0=0 lat0=0 dlon=180 dlat=90
-yrs = np.arange(2022,2023,1) # [2010]
+yrs = np.arange(2023,2024,1) # [2010]
 
 # E-W valid range is -180, 180
 
