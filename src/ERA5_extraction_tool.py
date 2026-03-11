@@ -5,12 +5,12 @@ Attempt to read ERA 5 data from https://cds.climate.copernicus.eu/user
 https://cds.climate.copernicus.eu/api-how-to
 
 The dataset and API code are here:
-    https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels?tab=form
+    https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels?tab=download
 
 Queued requests can be viewed here:
     https://cds.climate.copernicus.eu/live/queue
 
-In Sept 2024 the updated the CDS API; it mostly works the same as before, except that 
+In Sept 2024 they updated the CDS API; it mostly works the same as before, except that 
 the wave data must be requested separately from other data.
 Instructions for the new API are here:
     https://cds-beta.climate.copernicus.eu/how-to-api#install-the-cds-api-token
@@ -23,6 +23,9 @@ Updated Sept 1 2024
 import cdsapi
 import datetime
 import sys
+import time
+import os, zipfile, glob, tempfile, shutil
+import xarray as xr
 
 # N, W, S, E valid range is 90, -180, -90, 180
 # could use lon0=0 lat0=0 dlon=180 dlat=90
@@ -92,9 +95,13 @@ def get_surface_vars(lon0,lat0,dlon,dlat,yr,mm,output_file=None):
                 lon0+dlon,
             ],
             'format': 'netcdf',
+            "download_format": "unarchived",
         },
         output_file)
-    
+
+    final_path = _ensure_netcdf_from_cds(output_file)
+    print(f"Surface data saved at: {final_path}")
+
     # Write a readme file to say when and by what script the file was written
     calling_fname = str(sys.argv[0])
     output_file_prefix = output_file[:-3]
@@ -139,11 +146,11 @@ def get_wave_vars(lon0,lat0,dlon,dlat,yr,mm,output_file=None):
         {
             'product_type': 'reanalysis',
             'variable': [
-            'coefficient_of_drag_with_waves', 'mean_direction_of_total_swell', 'mean_direction_of_wind_waves',
-            'mean_period_of_total_swell', 'mean_period_of_wind_waves', 'mean_wave_direction',
-            'mean_wave_period', 'mean_wave_period_based_on_first_moment', 'mean_wave_period_based_on_first_moment_for_swell',
-            'mean_wave_period_based_on_first_moment_for_wind_waves', 'ocean_surface_stress_equivalent_10m_neutral_wind_direction', 'ocean_surface_stress_equivalent_10m_neutral_wind_speed',
-            'peak_wave_period', 'significant_height_of_combined_wind_waves_and_swell',
+            #'coefficient_of_drag_with_waves', 'mean_direction_of_total_swell', 'mean_direction_of_wind_waves',
+            #'mean_period_of_total_swell', 'mean_period_of_wind_waves', 'mean_wave_direction',
+            #'mean_wave_period', 'mean_wave_period_based_on_first_moment', 'mean_wave_period_based_on_first_moment_for_swell',
+            #'mean_wave_period_based_on_first_moment_for_wind_waves', 'ocean_surface_stress_equivalent_10m_neutral_wind_direction', 'ocean_surface_stress_equivalent_10m_neutral_wind_speed',
+            'peak_wave_period', 'significant_height_of_combined_wind_waves_and_swell','mean_wave_direction',
             ], 
             'year': yr,
             'month': mm, #[#'01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12',],
@@ -163,7 +170,10 @@ def get_wave_vars(lon0,lat0,dlon,dlat,yr,mm,output_file=None):
             'format': 'netcdf',
         },
         output_file)
-    
+
+    final_path = _ensure_netcdf_from_cds(output_file)
+    print(f"Wave data saved at: {final_path}")
+
     # Write a readme file to say when and by what script the file was written
     calling_fname = str(sys.argv[0])
     # strip off .nc from output_file
@@ -196,3 +206,85 @@ ERA5 monthly averaged data on pressure levels from 1979 to present
 ERA5 monthly averaged data on single levels from 1950 to 1978 (preliminary version)
 ERA5 monthly averaged data on single levels from 1979 to present
 '''
+
+'''Clone of matlab tic/toc from Stackoverflow user Benben:
+    https://stackoverflow.com/questions/5849800/what-is-the-python-equivalent-of-matlabs-tic-and-toc-functions
+'''
+def TicTocGenerator():
+    # Generator that returns time differences
+    ti = 0           # initial time
+    tf = time.time() # final time
+    while True:
+        ti = tf
+        tf = time.time()
+        yield tf-ti # returns the time difference
+
+TicToc = TicTocGenerator() # create an instance of the TicTocGen generator
+
+# This will be the main function through which we define both tic() and toc()
+def toc(tempBool=True):
+    # Prints the time difference yielded by generator instance TicToc
+    tempTimeInterval = next(TicToc)
+    if tempBool:
+        print( "Elapsed time: %f seconds.\n" %tempTimeInterval )
+
+def tic():
+    # Records a time in TicToc, marks the beginning of a time interval
+    toc(False)
+
+
+def _ensure_netcdf_from_cds(output_path: str, cleanup: bool = True) -> str:
+    """
+    If CDS returned a ZIP (often happens when variables have different time bases),
+    unpack it and merge the contained NetCDF files into a single *_merged.nc.
+    Returns the path to a readable NetCDF file.
+    """
+    # If it's already a valid NetCDF file, leave it
+    if not zipfile.is_zipfile(output_path):
+        return output_path
+
+    # Rename to .zip (for clarity) and extract
+    zip_path = output_path if output_path.endswith('.zip') else output_path + '.zip'
+    if zip_path != output_path:
+        os.replace(output_path, zip_path)
+
+    extract_dir = os.path.splitext(zip_path)[0] + "_parts"
+    os.makedirs(extract_dir, exist_ok=True)
+    with zipfile.ZipFile(zip_path) as zf:
+        zf.extractall(extract_dir)
+
+    nc_files = sorted(glob.glob(os.path.join(extract_dir, "*.nc")))
+    if not nc_files:
+        raise RuntimeError(f"No NetCDF files found inside {zip_path}")
+
+    # Try a simple multi-file open, then fall back to manual merge with coord renames
+    try:
+        ds = xr.open_mfdataset(nc_files, combine="by_coords")
+    except Exception:
+        ds_list = []
+        for f in nc_files:
+            d = xr.open_dataset(f)
+            # Harmonize coord names if needed
+            rename_map = {}
+            if "time" in d.dims and "valid_time" not in d.dims:
+                rename_map["time"] = "valid_time"
+            if "lat" in d.dims and "latitude" not in d.dims:
+                rename_map["lat"] = "latitude"
+            if "lon" in d.dims and "longitude" not in d.dims:
+                rename_map["lon"] = "longitude"
+            if rename_map:
+                d = d.rename(rename_map)
+            ds_list.append(d)
+        ds = xr.merge(ds_list, compat="override", combine_attrs="drop_conflicts")
+
+    merged_path = os.path.splitext(zip_path)[0]
+    ds.to_netcdf(merged_path)
+    ds.close()
+
+    if cleanup:
+        shutil.rmtree(extract_dir, ignore_errors=True)
+        # keep the .zip for provenance; delete if you prefer:
+        # os.remove(zip_path)
+
+    return merged_path
+

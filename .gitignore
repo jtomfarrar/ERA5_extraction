@@ -168,3 +168,6 @@ cython_debug/
 ./img/*/*
 *.mp4
 *.txt
+*.zip
+
+data/processed/ERA5_surface_SAFARI_2024.nc.zip
