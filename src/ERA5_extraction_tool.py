@@ -37,6 +37,57 @@ import xarray as xr
 #dlon = 5
 #yr = '2011'
 
+def get_timeseries(lon0, lat0, startdate, enddate, output_file=None):
+    '''
+    Extract ERA5 timeseries data using Copernicus Climate Data System API.  
+    Given a geographic location and a date range, saves file 'outfile.nc' in local directory
+
+    Parameters
+    ----------
+    lon0 : numeric
+        Target longitude.
+    lat0 : numeric
+        Target latitude.
+    startdate : str
+        Start date in format 'YYYY-MM-DD'.
+    enddate : str
+        End date in format 'YYYY-MM-DD'.
+    output_file (optional) : str
+        If provided, output filename is used. Otherwise, 'outfile.nc' is used.
+
+    Returns
+    -------
+    None, but saves output file in local directory.
+    '''
+    if output_file is None:
+        output_file = 'outfile.nc'
+    
+    dataset = "reanalysis-era5-single-levels-timeseries"
+    request = {
+        "variable": [
+            "2m_dewpoint_temperature",
+            "mean_sea_level_pressure",
+            "surface_pressure",
+            "surface_solar_radiation_downwards",
+            "sea_surface_temperature",
+            "surface_thermal_radiation_downwards",
+            "2m_temperature",
+            "total_precipitation",
+            "10m_u_component_of_wind",
+            "10m_v_component_of_wind",
+            "mean_wave_direction",
+            "mean_wave_period",
+            "significant_height_of_combined_wind_waves_and_swell"
+        ],
+        "location": {"longitude": lon0, "latitude": lat0},
+        "date": [f"{startdate}/{enddate}"],
+        "data_format": "netcdf",
+        "download_format": "unarchived",
+        "file_name": output_file
+    }
+
+    client = cdsapi.Client()
+    client.retrieve(dataset, request).download()
 
 def get_surface_vars(lon0,lat0,dlon,dlat,yr,mm,output_file=None):
     '''
