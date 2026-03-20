@@ -66,6 +66,7 @@ def get_timeseries(lon0, lat0, startdate, enddate, output_file=None):
     request = {
         "variable": [
             "2m_dewpoint_temperature",
+            "skin_temperature",
             "mean_sea_level_pressure",
             "surface_pressure",
             "surface_solar_radiation_downwards",
@@ -87,7 +88,22 @@ def get_timeseries(lon0, lat0, startdate, enddate, output_file=None):
     }
 
     client = cdsapi.Client()
-    client.retrieve(dataset, request).download()
+    client.retrieve(dataset, request).download(output_file)
+
+    final_path = _ensure_netcdf_from_cds(output_file)
+    print(f"Timeseries data saved at: {final_path}")
+
+    # Write a readme file to say when and by what script the file was written
+    calling_fname = str(sys.argv[0])
+    output_file_prefix = output_file[:-3]
+    ReadmeFile = open(output_file_prefix + "_README.txt", "w")
+    ReadmeFile.write(
+        'Written using ERA5_extraction_tool.get_timeseries() on \n'
+        + str(datetime.datetime.now())
+        + '\n Invoked from '
+        + calling_fname
+    )
+    ReadmeFile.close()
 
 def get_surface_vars(lon0,lat0,dlon,dlat,yr,mm,output_file=None):
     '''
@@ -125,7 +141,7 @@ def get_surface_vars(lon0,lat0,dlon,dlat,yr,mm,output_file=None):
         {
             'product_type': 'reanalysis',
             'variable': [
-                '10m_u_component_of_wind', '10m_v_component_of_wind', '2m_dewpoint_temperature',
+                '10m_u_component_of_wind', '10m_v_component_of_wind', '2m_dewpoint_temperature', 'skin_temperature',
                 '2m_temperature', 'mean_sea_level_pressure', 'sea_surface_temperature', 
                 'surface_net_solar_radiation', 'surface_net_thermal_radiation', 'surface_pressure',
                 'surface_solar_radiation_downwards', 'surface_thermal_radiation_downwards', 'total_precipitation',
@@ -219,6 +235,7 @@ def get_wave_vars(lon0,lat0,dlon,dlat,yr,mm,output_file=None):
                 lon0+dlon,
             ],
             'format': 'netcdf',
+            "download_format": "unarchived",
         },
         output_file)
 
@@ -338,4 +355,3 @@ def _ensure_netcdf_from_cds(output_path: str, cleanup: bool = True) -> str:
         # os.remove(zip_path)
 
     return merged_path
-

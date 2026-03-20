@@ -21,7 +21,7 @@ import time
 
 # N, W, S, E valid range is 90, -180, -90, 180
 # could use lon0=0 lat0=0 dlon=180 dlat=90
-yrs = np.arange(2010,2025,1) # endpoint is not included
+yrs = np.arange(2010,2026,1) # endpoint is not included
 months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12',],
 # E-W valid range is -180, 180
 
