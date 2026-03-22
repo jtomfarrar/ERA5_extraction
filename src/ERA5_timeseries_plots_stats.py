@@ -16,6 +16,7 @@ jfarrar@whoi.edu
 """
 
 # %%
+import datetime as dt
 import glob
 import os
 from pathlib import Path
@@ -34,7 +35,7 @@ from mpl_toolkits.basemap import Basemap
 
 
 # %%
-site_name = 'SAFARI'
+site_name =  'RAMA_12N'#'SAFARI'
 
 if site_name=="RAMA_12N":
     lon_pt = 88.5  # 88 deg 30.0'E
@@ -103,6 +104,7 @@ def derive_site_variables(raw_ds):
     tair_c = derived["t2m"] - 273.15
     dewpoint_c = derived["d2m"] - 273.15
     sst_c = derived["sst"] - 273.15
+    skin_temperature_c = derived["skt"] - 273.15
     msl_hpa = derived["msl"] / 100.0
     sw_down = derived["ssrd"] / 3600.0
     lw_down = derived["strd"] / 3600.0
@@ -122,6 +124,7 @@ def derive_site_variables(raw_ds):
     derived["air_temperature"] = tair_c
     derived["dewpoint_temperature"] = dewpoint_c
     derived["sea_surface_temperature"] = sst_c
+    derived["skin_temperature"] = skin_temperature_c
     derived["barometric_pressure"] = msl_hpa
     derived["solar_radiation_downwards"] = sw_down
     derived["solar_radiation_downwards_7day"] = sw_down_7day
@@ -137,7 +140,7 @@ def derive_site_variables(raw_ds):
     derived["sea_surface_temperature"].attrs["units"] = "degC"
     derived["barometric_pressure"].attrs["units"] = "hPa"
     derived["solar_radiation_downwards"].attrs["units"] = "W m-2"
-    derived["solar_radiation_downwards_7day"].attrs["units"] = "W m-2"
+    # derived["solar_radiation_downwards_7day"].attrs["units"] = "W m-2"
     derived["longwave_radiation_downwards"].attrs["units"] = "W m-2"
     derived["relative_humidity"].attrs["units"] = "%"
     derived["wave_height"].attrs["units"] = "m"
@@ -150,8 +153,9 @@ def derive_site_variables(raw_ds):
         "wind_speed",
         "air_temperature",
         "sea_surface_temperature",
+        "skin_temperature",
         "relative_humidity",
-        "solar_radiation_downwards_7day",
+        "solar_radiation_downwards",
         "longwave_radiation_downwards",
         "barometric_pressure",
         "wave_height",
@@ -167,6 +171,10 @@ def derive_site_variables(raw_ds):
 
 # %%
 def save_dataset(ds, outfile):
+    ds = ds.copy()
+    now = dt.datetime.utcnow()
+    ds.attrs["date_created"] = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    ds.attrs["history"] = f"{now.strftime('%Y-%m-%d')} ERA5_timeseries_plots_stats.py"
     ds.load()
     ds.to_netcdf(outfile)
 
@@ -203,10 +211,38 @@ def plot_locator_map(site_ds):
 
 
 # %%
+def _configure_time_axis(ax, time):
+    t0 = np.datetime64(time.values[0], 'D')
+    t1 = np.datetime64(time.values[-1], 'D')
+    nyears = float((t1 - t0) / np.timedelta64(365, 'D'))
+
+    if nyears > 15:
+        ax.xaxis.set_major_locator(mplt.dates.YearLocator(5))
+        ax.xaxis.set_major_formatter(mplt.dates.DateFormatter('%Y'))
+        ax.xaxis.set_minor_locator(mplt.dates.YearLocator())
+        plt.setp(ax.get_xticklabels(), rotation=0, ha='center')
+    elif nyears > 5:
+        ax.xaxis.set_major_locator(mplt.dates.YearLocator(2))
+        ax.xaxis.set_major_formatter(mplt.dates.DateFormatter('%Y'))
+        ax.xaxis.set_minor_locator(mplt.dates.YearLocator())
+        plt.setp(ax.get_xticklabels(), rotation=0, ha='center')
+    elif nyears > 2:
+        ax.xaxis.set_major_locator(mplt.dates.YearLocator())
+        ax.xaxis.set_major_formatter(mplt.dates.DateFormatter('%Y'))
+        ax.xaxis.set_minor_locator(mplt.dates.MonthLocator(interval=3))
+        plt.setp(ax.get_xticklabels(), rotation=0, ha='center')
+    else:
+        ax.xaxis.set_major_locator(mplt.dates.MonthLocator(interval=3))
+        ax.xaxis.set_major_formatter(mplt.dates.DateFormatter("%b '%y"))
+        ax.xaxis.set_minor_locator(mplt.dates.MonthLocator())
+        plt.setp(ax.get_xticklabels(), rotation=30, ha='right')
+
+
+# %%
 def plot_main_summary(site_ds, repeated_climatology_ds=None):
     fig, axs = plt.subplots(5, 1, sharex=True, figsize=(10, 8))
     legendkwargs = {"loc": "best", "fontsize": 7, "frameon": True}
-    climatology_style = {"linestyle": "--", "color": "k", "linewidth": 1.0, "alpha": 0.9}
+    climatology_style = {"linestyle": "--", "color": "darkred", "linewidth": 1.5, "alpha": 0.9}
 
     wnd = 0
     at = 1
@@ -254,12 +290,10 @@ def plot_main_summary(site_ds, repeated_climatology_ds=None):
     axs[rh].set(ylabel="[%]")
 
     for ax in axs:
-        ax.xaxis.set_major_locator(mplt.dates.MonthLocator(interval=6))
-        ax.xaxis.set_minor_locator(mplt.dates.MonthLocator())
+        _configure_time_axis(ax, site_ds.valid_time)
 
     plt.tight_layout()
     plt.subplots_adjust(hspace=0.1)
-    fig.autofmt_xdate()
 
     if savefig:
         plt.savefig(fig_dir / f"{site_name}_main_summary.{plotfiletype}", **savefig_args)
@@ -269,7 +303,7 @@ def plot_main_summary(site_ds, repeated_climatology_ds=None):
 def plot_supplemental_summary(site_ds, repeated_climatology_ds=None):
     fig, axs = plt.subplots(4, 1, sharex=True, figsize=(10, 8))
     legendkwargs = {"loc": "best", "fontsize": 7, "frameon": True}
-    climatology_style = {"linestyle": "--", "color": "k", "linewidth": 1.0, "alpha": 0.9}
+    climatology_style = {"linestyle": "--", "color": "darkred", "linewidth": 1.5, "alpha": 0.9}
     time = site_ds.valid_time
     climatology_time = None
     if repeated_climatology_ds is not None:
@@ -284,10 +318,10 @@ def plot_supplemental_summary(site_ds, repeated_climatology_ds=None):
     axs[0].set(ylabel="[m/s]")
     axs[0].title.set_text("Wind components, radiation, and wave properties")
 
-    axs[1].plot(time, site_ds["solar_radiation_downwards_7day"], label="SW down (7-day avg)")
+    axs[1].plot(time, site_ds["solar_radiation_downwards"].rolling(valid_time=24 * 7, center=True, min_periods=1).mean(), label="SW down (7-day avg)")
     axs[1].plot(time, site_ds["longwave_radiation_downwards"], label="LW down")
     if repeated_climatology_ds is not None:
-        axs[1].plot(climatology_time, repeated_climatology_ds["solar_radiation_downwards_7day"], label="SW down monthly clim.", **climatology_style)
+        axs[1].plot(climatology_time, repeated_climatology_ds["solar_radiation_downwards"], label="SW down monthly clim.", **climatology_style)
         axs[1].plot(climatology_time, repeated_climatology_ds["longwave_radiation_downwards"], label="LW down monthly clim.", **climatology_style)
     axs[1].legend(**legendkwargs)
     axs[1].set(ylabel="[W/m$^2$]")
@@ -305,12 +339,10 @@ def plot_supplemental_summary(site_ds, repeated_climatology_ds=None):
     axs[3].set(ylabel="[deg true]")
 
     for ax in axs:
-        ax.xaxis.set_major_locator(mplt.dates.MonthLocator(interval=6))
-        ax.xaxis.set_minor_locator(mplt.dates.MonthLocator())
+        _configure_time_axis(ax, site_ds.valid_time)
 
     plt.tight_layout()
     plt.subplots_adjust(hspace=0.1)
-    fig.autofmt_xdate()
 
     if savefig:
         plt.savefig(fig_dir / f"{site_name}_supplemental_summary.{plotfiletype}", **savefig_args)
@@ -407,8 +439,9 @@ def plot_monthly_climatology(climatology_ds):
         ("wave_height", "Wave height", "[m]"),
         ("air_temperature", "Air temperature", "[$^\circ$C]"),
         ("sea_surface_temperature", "SST", "[$^\circ$C]"),
+        #("skin_temperature", "Skin temperature", "[$^\circ$C]"),
         ("relative_humidity", "Relative humidity", "[%]"),
-        ("solar_radiation_downwards_7day", "Solar radiation down", "[W/m$^2$]"),
+        ("solar_radiation_downwards", "Solar radiation down", "[W/m$^2$]"),
         ("longwave_radiation_downwards", "Longwave radiation down", "[W/m$^2$]"),
         ("barometric_pressure", "Barometric pressure", "[hPa]"),
     ]

@@ -17,27 +17,25 @@ import ERA5_extraction_tool
 import numpy as np
 import time
 
-# %%
-
-# N, W, S, E valid range is 90, -180, -90, 180
-# could use lon0=0 lat0=0 dlon=180 dlat=90
-yrs = np.arange(2010,2025,1) # endpoint is not included
-months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12',],
-# E-W valid range is -180, 180
-
 
 # %%
-site_name = 'SAFARI'
+site_name = 'RAMA_12N'#'SAFARI'
 
 if site_name=="RAMA_12N":
     lon_pt = 88.5  # 88 deg 30.0'E
     lat_pt = 12.0  # 12 deg 00.0'N
+    startdate = '2000-01-01'
+    enddate = '2026-01-01'
 elif site_name=="Endurance_RCA":
     lon_pt = -130.2  # 130 deg 12.0'W
     lat_pt = 44.98   # 44 deg 58.8'N
+    startdate = '2000-01-01'
+    enddate = '2026-01-01'
 elif site_name=='SAFARI':
     lon_pt = -161 
     lat_pt = 35
+    startdate = '2000-01-01'
+    enddate = '2026-03-21'
 
 out_path = '../data/processed/timeseries/' # this is where the extracted data will be saved
 # create the output directory if it doesn't exist
@@ -45,8 +43,7 @@ if not os.path.exists(out_path):
     os.makedirs(out_path)
 
 # %%
-startdate = '2010-01-01'
-enddate = '2026-03-10'
+
 ERA5_extraction_tool.tic()
 output_file_met = out_path + 'ERA5_surface_' + site_name + '_' + startdate[:4] + '_' + enddate[:4] +'.nc'
 display(f'Extracting ERA5 surface meteorological data for {site_name} for years {startdate[:4]} to {enddate[:4]}...')
