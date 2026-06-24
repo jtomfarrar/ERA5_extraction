@@ -23,11 +23,10 @@ import xarray as xr
 
 
 # %%
-site_names = list(SITES.keys())
-print(f"Sites: {site_names}")
+site_name = 'SAFARI' # 'ASTRAL_2025_WHOI43' # 'RAMA_12N' # 'SAFARI' # 'MVCO' # 'RAMA_12N', 'ASTRAL_2025_Ida', 'ASTRAL_2025_Kelvin', 'ASTRAL_2025_Planck', 'ASTRAL_2025_WHOI43', 'Endurance_RCA', 'SAFARI', 'MVCO'
+print(f'Site: {site_name}  (options: {list(SITES.keys())})')
+
 # %%
-site_name  = site_names[5]
-print(f'Site: {site_name}  (options: {site_names})')
 
 cfg       = SITES[site_name]
 lon_pt    = cfg['lon_pt']
@@ -39,8 +38,6 @@ out_path = '../data/processed/timeseries/' # this is where the extracted data wi
 # create the output directory if it doesn't exist
 if not os.path.exists(out_path):
     os.makedirs(out_path)
-
-# %%
 
 
 # %%
@@ -89,6 +86,7 @@ def derive_site_variables(raw_ds):
     derived["wave_height"] = derived["swh"]
     derived["wave_period"] = derived["mwp"]
     derived["wave_direction"] = derived["mwd"]
+    derived["total_precipitation"] = derived["tp"] * 1000.0                                                                                                                                                                                                    
 
     derived["wind_speed"].attrs["units"] = "m s-1"
     derived["air_temperature"].attrs["units"] = "degC"
@@ -101,6 +99,29 @@ def derive_site_variables(raw_ds):
     derived["wave_height"].attrs["units"] = "m"
     derived["wave_period"].attrs["units"] = "s"
     derived["wave_direction"].attrs["units"] = "degree true"
+    derived["total_precipitation"].attrs["units"] = "mm hr-1"
+
+    # Propagate GRIB_stepType from source variables (lost during arithmetic).
+    grib_step_source = {
+        "u10": "u10", "v10": "v10",
+        "wind_speed": "u10",
+        "air_temperature": "t2m",
+        "dewpoint_temperature": "d2m",
+        "sea_surface_temperature": "sst",
+        "skin_temperature": "skt",
+        "barometric_pressure": "msl",
+        "solar_radiation_downwards": "ssrd",
+        "solar_radiation_downwards_7day": "ssrd",
+        "longwave_radiation_downwards": "strd",
+        "relative_humidity": "t2m",
+        "wave_height": "swh",
+        "wave_period": "mwp",
+        "wave_direction": "mwd",
+        "total_precipitation": "tp",
+    }
+    for derived_var, source_var in grib_step_source.items():
+        if "GRIB_stepType" in raw_ds[source_var].attrs:
+            derived[derived_var].attrs["GRIB_stepType"] = raw_ds[source_var].attrs["GRIB_stepType"]
 
     keep_vars = [
         "u10",
@@ -110,6 +131,7 @@ def derive_site_variables(raw_ds):
         "sea_surface_temperature",
         "skin_temperature",
         "relative_humidity",
+        "total_precipitation",
         "solar_radiation_downwards",
         "longwave_radiation_downwards",
         "barometric_pressure",

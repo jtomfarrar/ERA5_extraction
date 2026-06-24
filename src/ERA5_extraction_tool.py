@@ -42,6 +42,8 @@ def get_timeseries(lon0, lat0, startdate, enddate, output_file=None):
     Extract ERA5 timeseries data using Copernicus Climate Data System API.  
     Given a geographic location and a date range, saves file 'outfile.nc' in local directory
 
+    https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels-timeseries?tab=overview
+
     Parameters
     ----------
     lon0 : numeric
@@ -175,6 +177,81 @@ def get_surface_vars(lon0,lat0,dlon,dlat,yr,mm,output_file=None):
     ReadmeFile = open(output_file_prefix+"_README.txt", "w")
     ReadmeFile.write ('Written using ERA5_extraction_tool.get_surface_vars() on \n' + str(datetime.datetime.now()) + 
                       '\n Invoked from ' + calling_fname) 
+    ReadmeFile.close()
+
+def get_moisture_vars(lon0,lat0,dlon,dlat,yr,mm,output_file=None):
+    '''
+    Extract ERA5 moisture and column water data using Copernicus Climate Data System API.
+    Given a geographic region and a year, saves file 'ERA5_{lon0}E_{lat0}N_{yr}.nc' in local directory
+
+    Parameters
+    ----------
+    lon0 : numeric
+        Target longitude.
+    lat0 : numeric
+        Target latitude.
+    dlon : numeric
+        +/- latitude range around lon0.
+    dlat : numeric
+        +/- latitude range around lat0.
+    yr : str
+        Year to extract.
+    region_name (optional) : str
+        If provided, output filename is ERA5_surface_{region_name}_{yr}.nc (i.e., region_name + '_' + yr +'.nc')
+        If not provided, output fileanme is 'ERA5_surface_{lon0}E_{lat0}N_{yr}.nc'
+
+    Returns
+    -------
+    None, but saves output file in local directory.
+    'ERA5_{lon0}E_{lat0}N_{yr}.nc'
+
+    '''
+    if output_file is None:
+        output_file = 'outfile.nc'
+
+    c = cdsapi.Client()
+    c.retrieve(
+        'reanalysis-era5-single-levels', # DOI: 10.24381/cds.adbb2d47
+        {
+            'product_type': 'reanalysis',
+            'variable': [
+                'mean_sea_level_pressure',
+                'surface_pressure',
+                'vertical_integral_of_divergence_of_moisture_flux',
+                'vertical_integral_of_eastward_water_vapour_flux',
+                'vertical_integral_of_northward_water_vapour_flux',
+                'total_column_water',
+                'total_column_water_vapour',
+            ],
+            'year': yr,
+            'month': mm, #[#'01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12',],
+            'day': [
+                '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18',
+                '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31',
+            ],
+            'time': [
+                '00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00', '07:00', '08:00', '09:00', '10:00', '11:00',
+                '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00',
+            ],
+            # area is N, W, S, E; valid range is 90, -180, -90, 180
+            'area': [
+                lat0+dlat, lon0-dlon, lat0-dlat,
+                lon0+dlon,
+            ],
+            'format': 'netcdf',
+            "download_format": "unarchived",
+        },
+        output_file)
+
+    final_path = _ensure_netcdf_from_cds(output_file)
+    print(f"Moisture data saved at: {final_path}")
+
+    # Write a readme file to say when and by what script the file was written
+    calling_fname = str(sys.argv[0])
+    output_file_prefix = output_file[:-3]
+    ReadmeFile = open(output_file_prefix+"_README.txt", "w")
+    ReadmeFile.write ('Written using ERA5_extraction_tool.get_moisture_vars() on \n' + str(datetime.datetime.now()) +
+                      '\n Invoked from ' + calling_fname)
     ReadmeFile.close()
 
 def get_wave_vars(lon0,lat0,dlon,dlat,yr,mm,output_file=None):

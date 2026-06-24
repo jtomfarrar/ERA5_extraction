@@ -34,15 +34,16 @@ from mpl_toolkits.basemap import Basemap
 
 
 # %%
-site_names = list(SITES.keys())
-site_name  = site_names[5]
-print(f'Site: {site_name}  (options: {site_names})')
+site_name = 'Arabian_Sea' # 'ASTRAL_2025_WHOI43' # 'RAMA_12N' # 'SAFARI' # 'MVCO' # 'RAMA_12N', 'ASTRAL_2025_Ida', 'ASTRAL_2025_Kelvin', 'ASTRAL_2025_Planck', 'ASTRAL_2025_WHOI43', 'Endurance_RCA', 'SAFARI', 'MVCO'
+print(f'Site: {site_name}  (options: {list(SITES.keys())})')
 
 cfg    = SITES[site_name]
 lon_pt = cfg['lon_pt']
 lat_pt = cfg['lat_pt']
 dx     = cfg['dx']
 dy     = cfg['dy']
+
+
 
 # %%
 

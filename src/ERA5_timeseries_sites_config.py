@@ -44,7 +44,17 @@ SITES = {
     ),
     'SAFARI': dict(
         lon_pt=-161,    lat_pt=35,
-        startdate='2000-01-01', enddate='2026-03-21',
+        startdate='2000-01-01', enddate='2026-06-21',
         dx=60, dy=25,
+    ),
+    'MVCO': dict(
+        lon_pt=-70.4951,    lat_pt=41.0614,
+        startdate='2000-01-01', enddate='2026-04-01',
+        dx=10, dy=10,
+    ),
+    'Arabian_Sea': dict(
+        lon_pt=65,    lat_pt=15,
+        startdate='2000-01-01', enddate='2026-01-01',
+        dx=30, dy=20,
     ),
 }
