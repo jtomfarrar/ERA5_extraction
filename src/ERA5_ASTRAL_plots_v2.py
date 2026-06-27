@@ -52,7 +52,7 @@ tail_hours = 24
 
 ip = get_ipython() if 'get_ipython' in globals() else None
 if ip is not None:
-    ip.run_line_magic('matplotlib', 'widget')
+    ip.run_line_magic('matplotlib', 'ipympl')
 
 plt.rcParams['figure.figsize'] = (5, 4)
 plt.rcParams['figure.dpi'] = 100

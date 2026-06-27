@@ -54,7 +54,9 @@ savefig_args = {"bbox_inches": "tight", "pad_inches": 0.2}
 plt.rcParams["figure.figsize"] = (5, 4)
 plt.rcParams["figure.dpi"] = 100
 plt.rcParams["savefig.dpi"] = 400
-%matplotlib ipympl
+ip = get_ipython() if 'get_ipython' in globals() else None
+if ip is not None:
+    ip.run_line_magic('matplotlib', 'ipympl')
 
 # %%
 

@@ -88,6 +88,19 @@ VARIABLE_GROUPS = {
         'total_column_water',
         'total_column_water_vapour',
     ],
+    'fluxes': [
+        'surface_thermal_radiation_downwards',
+        'surface_solar_radiation_downwards',
+        'total_precipitation',
+        'skin_temperature',
+        'surface_latent_heat_flux',
+        'surface_net_solar_radiation',
+        'surface_net_thermal_radiation',
+        'surface_sensible_heat_flux',
+        'evaporation',
+        'instantaneous_eastward_turbulent_surface_stress',
+        'instantaneous_northward_turbulent_surface_stress',
+    ],
 }
 
 
@@ -181,7 +194,8 @@ def get_timeseries(lon0, lat0, startdate, enddate, output_file=None):
             "10m_v_component_of_wind",
             "mean_wave_direction",
             "mean_wave_period",
-            "significant_height_of_combined_wind_waves_and_swell"
+            "significant_height_of_combined_wind_waves_and_swell",
+            "boundary_layer_height"
         ],
         "location": {"longitude": lon0, "latitude": lat0},
         "date": [f"{startdate}/{enddate}"],

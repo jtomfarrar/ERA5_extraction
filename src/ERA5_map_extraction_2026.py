@@ -50,10 +50,10 @@ REGIONS = {
     ),
     'SAFARI_2025_2026': dict(
         region_name = 'SAFARI_2025_2026',
-        lon0 = -161,   # center longitude; lon0 ± dlon = 159–121°W
-        lat0 = 35,     # center latitude;  lat0 ± dlat =  15–55°N
-        dlon = 40,
-        dlat = 20,
+        lon0 = -161,   # center longitude; lon0 ± dlon = 151–113°W
+        lat0 = 35,     # center latitude;  lat0 ± dlat =  10–60°N
+        dlon = 48,
+        dlat = 25,
         start_year = 2025,
         start_month = 10,
         end_year = 2026,
@@ -80,10 +80,12 @@ tmp_path.mkdir(parents=True, exist_ok=True)
 output_file_met = out_path / f"ERA5_surface_{REGION['region_name']}_{date_label}.nc"
 output_file_waves = out_path / f"ERA5_surface_{REGION['region_name']}_waves_{date_label}.nc"
 output_file_moisture = out_path / f"ERA5_surface_{REGION['region_name']}_moisture_{date_label}.nc"
+output_file_fluxes = out_path / f"ERA5_surface_{REGION['region_name']}_fluxes_{date_label}.nc"
 
 print(f"Surface met  -> {output_file_met}")
 print(f"Wave data    -> {output_file_waves}")
-print(f"Monthly moisture -> {tmp_path}")
+print(f"Moisture data -> {output_file_moisture}")
+print(f"Surface fluxes -> {output_file_fluxes}")
 
 # %%
 # Download surface met one month at a time to stay within CDS size limits
@@ -106,6 +108,7 @@ ERA5_extraction_tool.extract_monthly_range(
 '''
 # %%
 # Download wave data one month at a time
+'''
 ERA5_extraction_tool.extract_monthly_range(
     REGION['lon0'],
     REGION['lat0'],
@@ -121,9 +124,11 @@ ERA5_extraction_tool.extract_monthly_range(
     monthly_file_prefix=f"ERA5_surface_{REGION['region_name']}_waves",
     cleanup_tmp=True,
 )
+'''
 
 # %%
 # Download moisture data
+'''
 ERA5_extraction_tool.extract_monthly_range(
     REGION['lon0'],
     REGION['lat0'],
@@ -137,5 +142,23 @@ ERA5_extraction_tool.extract_monthly_range(
     output_file_moisture,
     tmp_path,
     monthly_file_prefix=f"ERA5_surface_{REGION['region_name']}_moisture",
+    cleanup_tmp=True,
+)
+'''
+# %%
+# Download surface flux data
+ERA5_extraction_tool.extract_monthly_range(
+    REGION['lon0'],
+    REGION['lat0'],
+    REGION['dlon'],
+    REGION['dlat'],
+    REGION['start_year'],
+    REGION['start_month'],
+    REGION['end_year'],
+    REGION['end_month'],
+    'fluxes',
+    output_file_fluxes,
+    tmp_path,
+    monthly_file_prefix=f"ERA5_surface_{REGION['region_name']}_fluxes",
     cleanup_tmp=True,
 )

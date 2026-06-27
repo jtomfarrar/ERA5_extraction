@@ -47,8 +47,10 @@ movie_dir = __figdir__ + '/movie_frames/'
 if not os.path.exists(movie_dir):
     os.makedirs(movie_dir)
 
-%matplotlib widget
-# %matplotlib qt5
+ip = get_ipython() if 'get_ipython' in globals() else None
+if ip is not None:
+    ip.run_line_magic('matplotlib', 'ipympl')
+    # ip.run_line_magic('matplotlib', 'qt5')
 plt.rcParams['figure.figsize'] = (5,4)
 plt.rcParams['figure.dpi'] = 100
 plt.rcParams['savefig.dpi'] = 400
