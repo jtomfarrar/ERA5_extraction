@@ -57,4 +57,15 @@ SITES = {
         startdate='2000-01-01', enddate='2026-01-01',
         dx=30, dy=20,
     ),
+    'Univ_of_Calabar': dict(
+        lon_pt=8.355256,   lat_pt=4.948794,
+        startdate='2000-01-01', enddate='2026-01-01',
+        dx=10, dy=10,
+    ),
+    # 4°56'55.66"N 8°21'18.92"E
+    'Calabar_offshore': dict(
+        lon_pt=7.0,   lat_pt=3.5,
+        startdate='2000-01-01', enddate='2026-01-01',
+        dx=10, dy=10,
+    ),
 }

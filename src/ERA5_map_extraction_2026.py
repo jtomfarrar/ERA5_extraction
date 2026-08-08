@@ -60,9 +60,33 @@ REGIONS = {
         end_month = 6,
         out_path = '../data/processed/',
     ),
+    'SAFARI_2020_2025': dict(
+        region_name = 'SAFARI_2020_2025',
+        lon0 = -161,   # center longitude; lon0 ± dlon = 151–113°W
+        lat0 = 35,     # center latitude;  lat0 ± dlat =  10–60°N
+        dlon = 48,
+        dlat = 25,
+        start_year = 2020,
+        start_month = 1,
+        end_year = 2025,
+        end_month = 12,
+        out_path = '../data/processed/',
+    ),
+    'Gulf_of_Guinea': dict(
+        region_name = 'Gulf_of_Guinea',
+        lon0 =0,    # center longitude; lon0 ± dlon
+        lat0 = 2.5,    # center latitude;  lat0 ± dlat
+        dlon = 15,
+        dlat = 7.5,
+        start_year = 2010,
+        start_month = 1,
+        end_year = 2026,
+        end_month = 7,
+        out_path = '../data/processed/',
+    ),
 }
 
-REGION = REGIONS['SAFARI_2025_2026'] # REGIONS['ASTRAL_big_2025']  # <-- select active region here
+REGION = REGIONS['Gulf_of_Guinea']  # REGIONS['SAFARI_2025_2026'] # REGIONS['ASTRAL_big_2025']  # <-- select active region here
 
 # %%
 out_path = Path(REGION['out_path'])
@@ -89,7 +113,6 @@ print(f"Surface fluxes -> {output_file_fluxes}")
 
 # %%
 # Download surface met one month at a time to stay within CDS size limits
-'''
 ERA5_extraction_tool.extract_monthly_range(
     REGION['lon0'],
     REGION['lat0'],
@@ -105,10 +128,8 @@ ERA5_extraction_tool.extract_monthly_range(
     monthly_file_prefix=f"ERA5_surface_{REGION['region_name']}",
     cleanup_tmp=False,
 )
-'''
 # %%
 # Download wave data one month at a time
-'''
 ERA5_extraction_tool.extract_monthly_range(
     REGION['lon0'],
     REGION['lat0'],
@@ -124,7 +145,6 @@ ERA5_extraction_tool.extract_monthly_range(
     monthly_file_prefix=f"ERA5_surface_{REGION['region_name']}_waves",
     cleanup_tmp=True,
 )
-'''
 
 # %%
 # Download moisture data
@@ -147,6 +167,7 @@ ERA5_extraction_tool.extract_monthly_range(
 '''
 # %%
 # Download surface flux data
+'''
 ERA5_extraction_tool.extract_monthly_range(
     REGION['lon0'],
     REGION['lat0'],
@@ -162,3 +183,4 @@ ERA5_extraction_tool.extract_monthly_range(
     monthly_file_prefix=f"ERA5_surface_{REGION['region_name']}_fluxes",
     cleanup_tmp=True,
 )
+'''

@@ -34,7 +34,7 @@ from mpl_toolkits.basemap import Basemap
 
 
 # %%
-site_name = 'Arabian_Sea' # 'ASTRAL_2025_WHOI43' # 'RAMA_12N' # 'SAFARI' # 'MVCO' # 'RAMA_12N', 'ASTRAL_2025_Ida', 'ASTRAL_2025_Kelvin', 'ASTRAL_2025_Planck', 'ASTRAL_2025_WHOI43', 'Endurance_RCA', 'SAFARI', 'MVCO'
+site_name = 'Univ_of_Calabar' #'Calabar_offshore' # 'Univ_of_Calabar' # 'Arabian_Sea' # 'ASTRAL_2025_WHOI43' # 'RAMA_12N' # 'SAFARI' # 'MVCO' # 'RAMA_12N', 'ASTRAL_2025_Ida', 'ASTRAL_2025_Kelvin', 'ASTRAL_2025_Planck', 'ASTRAL_2025_WHOI43', 'Endurance_RCA', 'SAFARI', 'MVCO'
 print(f'Site: {site_name}  (options: {list(SITES.keys())})')
 
 cfg    = SITES[site_name]
@@ -410,7 +410,10 @@ plot_main_summary(site_ds, repeated_climatology_ds=repeated_climatology_ds)
 plot_supplemental_summary(site_ds, repeated_climatology_ds=repeated_climatology_ds)
 
 # %%
-plot_histograms(site_ds)
+if 'wave_height' in site_ds and np.isfinite(site_ds['wave_height'].values).any():
+    plot_histograms(site_ds)
+else:
+    print('Skipping plot_histograms: wave_height not in site_ds or all NaN')
 
 # %%
 plot_monthly_climatology(climatology_ds)

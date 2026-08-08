@@ -23,7 +23,7 @@ import xarray as xr
 
 
 # %%
-site_name = 'SAFARI' # 'ASTRAL_2025_WHOI43' # 'RAMA_12N' # 'SAFARI' # 'MVCO' # 'RAMA_12N', 'ASTRAL_2025_Ida', 'ASTRAL_2025_Kelvin', 'ASTRAL_2025_Planck', 'ASTRAL_2025_WHOI43', 'Endurance_RCA', 'SAFARI', 'MVCO'
+site_name = 'Calabar_offshore' # 'Univ_of_Calabar' # 'ASTRAL_2025_WHOI43' # 'RAMA_12N' # 'SAFARI' # 'MVCO' # 'RAMA_12N', 'ASTRAL_2025_Ida', 'ASTRAL_2025_Kelvin', 'ASTRAL_2025_Planck', 'ASTRAL_2025_WHOI43', 'Endurance_RCA', 'SAFARI', 'MVCO'
 print(f'Site: {site_name}  (options: {list(SITES.keys())})')
 
 # %%
@@ -159,8 +159,8 @@ def save_dataset(ds, outfile):
 # %%
 ERA5_extraction_tool.tic()
 output_file_met = out_path + 'ERA5_surface_' + site_name + '_' + startdate[:4] + '_' + enddate[:4] + '.nc'
-display(f'Extracting ERA5 surface meteorological data for {site_name} for years {startdate[:4]} to {enddate[:4]}...')
-display('View the progress here: https://cds.climate.copernicus.eu/requests')
+print(f'Extracting ERA5 surface meteorological data for {site_name} for years {startdate[:4]} to {enddate[:4]}...')
+print('View the progress here: https://cds.climate.copernicus.eu/requests')
 try:
     ERA5_extraction_tool.get_timeseries(lon_pt, lat_pt, startdate, enddate, output_file_met)
     print(f"Successfully downloaded: {output_file_met}")
