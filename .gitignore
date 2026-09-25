@@ -171,3 +171,6 @@ cython_debug/
 *.zip
 
 data/processed/ERA5_surface_SAFARI_2024.nc.zip
+
+# Local working notes
+context.md
