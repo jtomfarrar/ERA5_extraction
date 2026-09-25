@@ -29,12 +29,13 @@ from ERA5_timeseries_sites_config import SITES
 import matplotlib as mplt
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import xarray as xr
 from mpl_toolkits.basemap import Basemap
 
 
 # %%
-site_name = 'Univ_of_Calabar' #'Calabar_offshore' # 'Univ_of_Calabar' # 'Arabian_Sea' # 'ASTRAL_2025_WHOI43' # 'RAMA_12N' # 'SAFARI' # 'MVCO' # 'RAMA_12N', 'ASTRAL_2025_Ida', 'ASTRAL_2025_Kelvin', 'ASTRAL_2025_Planck', 'ASTRAL_2025_WHOI43', 'Endurance_RCA', 'SAFARI', 'MVCO'
+site_name = 'Stratus' # 'Univ_of_Calabar' #'Calabar_offshore' # 'Univ_of_Calabar' # 'Arabian_Sea' # 'ASTRAL_2025_WHOI43' # 'RAMA_12N' # 'SAFARI' # 'MVCO' # 'RAMA_12N', 'ASTRAL_2025_Ida', 'ASTRAL_2025_Kelvin', 'ASTRAL_2025_Planck', 'ASTRAL_2025_WHOI43', 'Endurance_RCA', 'SAFARI', 'MVCO'
 print(f'Site: {site_name}  (options: {list(SITES.keys())})')
 
 cfg    = SITES[site_name]
@@ -69,6 +70,7 @@ fig_dir.mkdir(parents=True, exist_ok=True)
 site_file = output_dir / f"ERA5_surface_{site_name}_site_timeseries.nc"
 climatology_file = output_dir / f"ERA5_surface_{site_name}_site_monthly_climatology.nc"
 extreme_wave_file = output_dir / f"ERA5_surface_{site_name}_wave_height_gt10m.txt"
+wave_bin_stats_file = output_dir / f"ERA5_surface_{site_name}_wave_stats_by_height_bin.csv"
 
 
 # %%
@@ -291,6 +293,113 @@ def plot_histograms(site_ds):
 
 
 # %%
+def circular_stats(deg):
+    """
+    Vector-mean direction and spread of an array of directions.
+
+    Parameters
+    ----------
+    deg : array-like
+        Directions in degrees.
+
+    Returns
+    -------
+    mean_deg : float
+        Circular mean direction in [0, 360).
+    R : float
+        Mean resultant length (1 = all directions identical, 0 = no preferred direction).
+    std_deg : float
+        Circular standard deviation, sqrt(-2 ln R), in degrees.
+    """
+    rad = np.deg2rad(deg)
+    S, C = np.mean(np.sin(rad)), np.mean(np.cos(rad))
+    R = np.hypot(S, C)
+    mean_deg = np.rad2deg(np.arctan2(S, C)) % 360
+    std_deg = np.rad2deg(np.sqrt(-2 * np.log(R))) if R > 0 else np.nan
+    return mean_deg, R, std_deg
+
+
+# %%
+def wave_stats_by_height_bin(site_ds, bins=40, min_count=5):
+    """
+    Wave period and direction statistics within each significant wave height bin.
+
+    Bins with fewer than min_count samples get NaN statistics (count is still reported).
+    ERA5 mwd is the direction waves come FROM (deg true); mwp is the mean period T_m-1,0.
+
+    Parameters
+    ----------
+    site_ds : xr.Dataset
+        Must contain wave_height, wave_period, wave_direction.
+    bins : int or array-like
+        Passed to np.histogram_bin_edges (40 matches plot_histograms).
+    min_count : int
+
+    Returns
+    -------
+    stats : pd.DataFrame
+    """
+    hs = site_ds["wave_height"].values
+    tm = site_ds["wave_period"].values
+    wdir = site_ds["wave_direction"].values
+    good = np.isfinite(hs) & np.isfinite(tm) & np.isfinite(wdir)
+    hs, tm, wdir = hs[good], tm[good], wdir[good]
+
+    edges = np.histogram_bin_edges(hs, bins=bins)
+    ibin = np.clip(np.digitize(hs, edges) - 1, 0, len(edges) - 2)
+
+    rows = []
+    for k in range(len(edges) - 1):
+        in_bin = ibin == k
+        n = int(in_bin.sum())
+        row = {"hs_lo_m": edges[k], "hs_hi_m": edges[k + 1], "hs_mid_m": 0.5 * (edges[k] + edges[k + 1]), "count": n}
+        if n >= min_count:
+            p10, p50, p90 = np.percentile(tm[in_bin], [10, 50, 90])
+            mean_deg, R, std_deg = circular_stats(wdir[in_bin])
+        else:
+            p10 = p50 = p90 = mean_deg = R = std_deg = np.nan
+        row.update({"period_p10_s": p10, "period_median_s": p50, "period_p90_s": p90,
+                    "dir_mean_deg": mean_deg, "dir_R": R, "dir_std_deg": std_deg})
+        rows.append(row)
+
+    return pd.DataFrame(rows)
+
+
+# %%
+def plot_wave_stats_by_height_bin(site_ds, stats):
+    fig, axs = plt.subplots(3, 1, figsize=(7, 9), sharex=True)
+    hs = site_ds["wave_height"].values
+    good = np.isfinite(hs)
+    edges = np.append(stats["hs_lo_m"].values, stats["hs_hi_m"].values[-1])
+    width = np.diff(edges)
+    hist2d_args = {"cmap": "Greys", "norm": mplt.colors.LogNorm(), "cmin": 1}
+
+    percent = 100 * stats["count"] / stats["count"].sum()
+    axs[0].bar(stats["hs_mid_m"], percent, width=width, color="0.6", edgecolor="k")
+    axs[0].set_yscale("log")
+    axs[0].set_ylabel("Percent of hours [%]")
+    axs[0].set_title(f"{site_name}: wave period and direction by $H_s$ bin")
+
+    axs[1].hist2d(hs[good], site_ds["wave_period"].values[good], bins=[edges, 40], **hist2d_args)
+    axs[1].fill_between(stats["hs_mid_m"], stats["period_p10_s"], stats["period_p90_s"], color="C0", alpha=0.3, label="10–90%")
+    axs[1].plot(stats["hs_mid_m"], stats["period_median_s"], "C0o-", ms=3, label="median")
+    axs[1].set_ylabel("Mean wave period $T_{m-1,0}$ [s]")
+    axs[1].legend(loc="upper left", fontsize=8)
+
+    axs[2].hist2d(hs[good], site_ds["wave_direction"].values[good], bins=[edges, np.arange(0, 361, 10)], **hist2d_args)
+    axs[2].errorbar(stats["hs_mid_m"], stats["dir_mean_deg"], yerr=stats["dir_std_deg"], fmt="C3o", ms=3, capsize=2, label="circular mean ± circ. std")
+    axs[2].set_ylim(0, 360)
+    axs[2].set_yticks(np.arange(0, 361, 90))
+    axs[2].set_ylabel("Mean wave direction (from) [deg true]")
+    axs[2].set_xlabel("Significant wave height $H_s$ [m]")
+    axs[2].legend(loc="upper left", fontsize=8)
+
+    plt.tight_layout()
+    if savefig:
+        plt.savefig(fig_dir / f"{site_name}_wave_stats_by_height_bin.{plotfiletype}", **savefig_args)
+
+
+# %%
 def compute_monthly_climatology(site_ds):
     climatology_ds = site_ds.groupby("valid_time.month").mean()
     climatology_ds.attrs["site_name"] = site_name
@@ -414,6 +523,14 @@ if 'wave_height' in site_ds and np.isfinite(site_ds['wave_height'].values).any()
     plot_histograms(site_ds)
 else:
     print('Skipping plot_histograms: wave_height not in site_ds or all NaN')
+
+# %% Wave period and direction in each wave-height bin
+if 'wave_height' in site_ds and np.isfinite(site_ds['wave_height'].values).any():
+    wave_bin_stats = wave_stats_by_height_bin(site_ds, bins=40, min_count=5)
+    wave_bin_stats.to_csv(wave_bin_stats_file, index=False, float_format="%.3f")
+    print(f"Saved wave stats by height bin: {wave_bin_stats_file}")
+    print(wave_bin_stats.dropna().tail(10).to_string(index=False))
+    plot_wave_stats_by_height_bin(site_ds, wave_bin_stats)
 
 # %%
 plot_monthly_climatology(climatology_ds)

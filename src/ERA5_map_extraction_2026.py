@@ -84,9 +84,35 @@ REGIONS = {
         end_month = 7,
         out_path = '../data/processed/',
     ),
+    'Gulf_of_Mexico': dict(
+        region_name = 'Gulf_of_Mexico',
+        lon0 = -87.5,  # center longitude; lon0 ± dlon = 100–75°W
+        lat0 = 20,      # center latitude;  lat0 ± dlat = 5–35°N
+        dlon = 12.5,
+        dlat = 15,
+        start_year = 2020,
+        start_month = 1,
+        end_year = 2026,
+        end_month = 8,
+        out_path = '../data/processed/',
+    ),
+    'Gulf_of_Mexico_large': dict(
+        # All of Mexico (14.5–32.7°N, 118.4–86.7°W) plus the Mississippi/Missouri drainage basin
+        # (north to ~49.5°N at the Canadian border, west to the Continental Divide, east to the Alleghenies)
+        region_name = 'Gulf_of_Mexico_large',
+        lon0 = -97.5,  # center longitude; lon0 ± dlon = 120–75°W
+        lat0 = 32,     # center latitude;  lat0 ± dlat = 14–50°N
+        dlon = 22.5,
+        dlat = 18,
+        start_year = 2020,
+        start_month = 1,
+        end_year = 2026,
+        end_month = 8,
+        out_path = '../data/processed/',
+    ),
 }
 
-REGION = REGIONS['Gulf_of_Guinea']  # REGIONS['SAFARI_2025_2026'] # REGIONS['ASTRAL_big_2025']  # <-- select active region here
+REGION = REGIONS['Gulf_of_Mexico_large']  # REGIONS['Gulf_of_Mexico'] # REGIONS['SAFARI_2025_2026'] # REGIONS['ASTRAL_big_2025']  # <-- select active region here
 
 # %%
 out_path = Path(REGION['out_path'])
@@ -148,7 +174,6 @@ ERA5_extraction_tool.extract_monthly_range(
 
 # %%
 # Download moisture data
-'''
 ERA5_extraction_tool.extract_monthly_range(
     REGION['lon0'],
     REGION['lat0'],
@@ -164,10 +189,8 @@ ERA5_extraction_tool.extract_monthly_range(
     monthly_file_prefix=f"ERA5_surface_{REGION['region_name']}_moisture",
     cleanup_tmp=True,
 )
-'''
 # %%
 # Download surface flux data
-'''
 ERA5_extraction_tool.extract_monthly_range(
     REGION['lon0'],
     REGION['lat0'],
@@ -183,4 +206,4 @@ ERA5_extraction_tool.extract_monthly_range(
     monthly_file_prefix=f"ERA5_surface_{REGION['region_name']}_fluxes",
     cleanup_tmp=True,
 )
-'''
+

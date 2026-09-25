@@ -68,4 +68,9 @@ SITES = {
         startdate='2000-01-01', enddate='2026-01-01',
         dx=10, dy=10,
     ),
+    'Stratus': dict(
+        lon_pt=-85.0,   lat_pt=-20.0,
+        startdate='2000-01-01', enddate='2026-01-01',
+        dx=25, dy=25,
+    ),
 }

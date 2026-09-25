@@ -24,8 +24,8 @@ from tqdm import tqdm
 home_dir = os.path.expanduser("~")
 os.chdir(home_dir+'/Python/ERA5_extraction/src')
 # %%
-site_name = 'Gulf_of_Guinea'#'SAFARI_2025_2026'#'SAFARI'#'Lofoten_Basin'#'Jan_Mayan'#'NORSE' #can be 'NTAS', 'WHOTS', 'Stratus', or 'Papa'
-var ='swh' #'atmp' #'slp' #'sst' #'swh' #'tcwv' #'ivt' #'vimdf' #'evap' #'emp'
+site_name = 'Gulf_of_Mexico_large'#'Gulf_of_Mexico'#'Gulf_of_Guinea'#'SAFARI_2025_2026'#'SAFARI'#'Lofoten_Basin'#'Jan_Mayan'#'NORSE' #can be 'NTAS', 'WHOTS', 'Stratus', or 'Papa'
+var ='ivt' #'atmp' #'slp' #'sst' #'swh' #'tcwv' #'ivt' #'vimdf' #'evap' #'emp'
 
 if site_name=='WHOTS':
     lon0 = -158
@@ -186,9 +186,90 @@ elif site_name=='Gulf_of_Guinea':
     elif var == 'slp':
         lev = np.arange(1000,1020,1)
     elif var == 'swh':
-        lev = np.arange(-.2,4,.2)
+        lev = np.arange(0,3.5,.2)
     elif var == 'sst':
         lev = np.arange(21,34,0.5)
+elif site_name=='Gulf_of_Mexico':
+    lon0 = -87.5
+    lat0 = 20
+    lon_pt = -89.67  # NDBC 42001 (Mid Gulf)
+    lat_pt = 25.93   # NDBC 42001 (Mid Gulf)
+    suffix = '_202101_202207'
+    dx = 12.5
+    dy = 15
+    map_resolution = 'l'
+    skipx, skipy = 5, 5
+    quiver_scale = 150
+    quiver_scale_flux = 10000
+    quiver_key_speed = 10
+    quiver_key_flux = 250
+    quiver_key_x, quiver_key_y = 0.3, 0.06
+    lat_tics, lon_tics = 5, 5
+    place_labels = {
+        # name: (lon, lat, fontsize)
+        'Mexico': (-99.0, 23.0, 10),
+        'Texas': (-98.5, 30.5, 10),
+        'Louisiana': (-92.0, 31.5, 10),
+        'Florida': (-81.5, 28.5, 10),
+        'Cuba': (-79.0, 21.8, 10),
+        'Yucatan': (-89.0, 19.5, 10),
+        'Guatemala': (-90.5, 15.3, 8),
+        'Honduras': (-86.5, 14.8, 8),
+        'Nicaragua': (-85.0, 12.8, 8),
+        'Jamaica': (-77.3, 18.3, 8),
+        'Panama': (-80.5, 8.8, 8),
+        'Colombia': (-76.0, 6.5, 10),
+    }
+    plot_time = np.datetime64('2021-08-29T12:00:00')  # Hurricane Ida approaching the Louisiana coast
+    if var == 'atmp':
+        lev = np.arange(-5,36,1)
+    elif var == 'slp':
+        lev = np.arange(950,1026,2)
+    elif var == 'swh':
+        lev = np.arange(0,6.2,.2)
+    elif var == 'sst':
+        lev = np.arange(12,33,0.5)
+elif site_name=='Gulf_of_Mexico_large':
+    lon0 = -97.5
+    lat0 = 32
+    lon_pt = -89.25  # Mississippi River mouth (Head of Passes)
+    lat_pt = 29.15   # Mississippi River mouth (Head of Passes)
+    suffix = '_202001_202608'
+    dx = 22.5
+    dy = 18
+    map_resolution = 'l'
+    skipx, skipy = 8, 8
+    quiver_scale = 200
+    quiver_scale_flux = 10000
+    quiver_key_speed = 10
+    quiver_key_flux = 250
+    quiver_key_x, quiver_key_y = 0.3, 0.06
+    lat_tics, lon_tics = 5, 10
+    place_labels = {
+        # name: (lon, lat, fontsize)
+        'Montana': (-110.0, 47.0, 9),
+        'Minnesota': (-94.5, 46.5, 9),
+        'Ohio': (-82.8, 40.3, 9),
+        'Colorado': (-105.5, 39.0, 9),
+        'Missouri': (-92.5, 38.5, 9),
+        'Texas': (-99.5, 31.5, 9),
+        'Louisiana': (-92.0, 31.0, 9),
+        'Florida': (-81.5, 28.5, 9),
+        'Baja California': (-114.0, 28.5, 8),
+        'Mexico': (-102.0, 23.5, 10),
+        'Yucatan': (-89.0, 19.5, 9),
+        'Cuba': (-79.0, 21.8, 9),
+        'Guatemala': (-90.5, 15.3, 8),
+    }
+    plot_time = np.datetime64('2021-08-29T12:00:00')  # Hurricane Ida approaching the Louisiana coast
+    if var == 'atmp':
+        lev = np.arange(0,42,2)
+    elif var == 'slp':
+        lev = np.arange(930,1046,2)
+    elif var == 'swh':
+        lev = np.arange(0,8.2,.2)
+    elif var == 'sst':
+        lev = np.arange(0,42,1)
 else:
     raise ValueError(f'No site configuration found for {site_name}')
 # %%
@@ -611,7 +692,7 @@ for tind in range(0,len(time),2):
     print('Frame: ' + str(tind) ' of ' + str(len(time)))
     plot_map(ERA,tind)
     # 4 digit number for frame number
-    plt.savefig(movie_dir + site_name + '_map_' + str(tind).zfill(4),**savefig_args)
+    plt.savefig(movie_dir + site_name + '_map_' + str(tind).zfill(6),**savefig_args)
     plt.close()
 '''
 # %%
@@ -630,14 +711,14 @@ def plot_map_parallel(tind):
     # Plot WG positions
 
     # plt.legend()
-    plt.savefig(movie_dir + site_name + '_map_' + str(tind).zfill(4), dpi=200, **savefig_args)
+    plt.savefig(movie_dir + site_name + '_map_' + str(tind).zfill(6), dpi=200, **savefig_args)
     plt.close()
 
 
 # %%
 # Limit the movie to a time window (set either to None to use the full record)
-movie_start_time = np.datetime64('2025-01-01T00:00:00')
-movie_end_time = np.datetime64('2025-12-31T23:00:00')
+movie_start_time = np.datetime64('2021-01-01T00:00:00')
+movie_end_time = np.datetime64('2022-07-31T23:00:00')
 movie_step = 2  # frame stride in time steps; e.g. 3 keeps every 3rd hour, cutting frame count (and runtime) by 3x
 
 # parallel version of the above loop

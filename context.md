@@ -8,14 +8,16 @@ Generalizing `src/ERA5_SAFARI_plots.py` so it can make maps and movies for multi
 
 The current active configuration in the plotting script is:
 
-- `site_name = 'SAFARI_2025_2026'`
-- `var = 'atmp'`
+- `site_name = 'Gulf_of_Mexico'`
+- `var = 'swh'`
+
+Recent work has moved to Gulf of Mexico / Mississippi basin domains; see Domain Notes.
 
 ## Important Decisions
 
 - Keep the existing `elif site_name == ...` site configuration style rather than introducing a site configuration dictionary.
 - Use `suffix` for optional filename suffixes, not `date_label`.
-- Only `SAFARI_2025_2026` currently uses `suffix = '_202510_202606'`; other site branches use `suffix = ''`.
+- Site branches that read date-labelled files set `suffix` accordingly: `SAFARI_2025_2026` uses `'_202510_202606'`, `Gulf_of_Guinea` uses `'_201001_202607'`, `Gulf_of_Mexico` uses `'_202101_202207'`, `Gulf_of_Mexico_large` uses `'_201001_202608'`. Older site branches use `suffix = ''`.
 - Use `lon0` and `lat0` for the extracted map-domain center, consistent with `src/ERA5_map_extraction_2026.py`.
 - Use `lon_pt` and `lat_pt` for the plotted site marker or mooring location.
 - For `SAFARI_2025_2026`, the extracted domain center is `lon0 = -161`, `lat0 = 35`, while the actual mooring marker is `lon_pt = -158`, `lat_pt = 33.44`.
@@ -115,6 +117,25 @@ The updated `SAFARI_2025_2026` extraction settings are `lon0 = -161`, `lat0 = 35
 - Surface grid size if using 0.25 degree spacing: 201 latitude by 385 longitude
 - Wave grid size if using 0.5 degree spacing: 101 latitude by 193 longitude
 
+### Gulf of Mexico domains
+
+`Gulf_of_Mexico` (`lon0 = -87.5`, `lat0 = 20`, `dlon = 12.5`, `dlat = 15`):
+
+- Latitude: 5 to 35 degrees north
+- Longitude: -100 to -75 degrees east
+- Surface grid: 121 latitude by 101 longitude at 0.25 degrees
+- Wave grid: 61 latitude by 51 longitude at 0.5 degrees
+- Data on disk covers 2021-01 to 2022-07 (`_202101_202207`); the region dict in the extraction script has since been changed to 2010-01 to 2026-08, so a re-run would write different filenames.
+
+`Gulf_of_Mexico_large` (`lon0 = -97.5`, `lat0 = 32`, `dlon = 22.5`, `dlat = 18`), added 2026-09-15:
+
+- Latitude: 14 to 50 degrees north
+- Longitude: -120 to -75 degrees east
+- Surface grid: 145 latitude by 181 longitude at 0.25 degrees
+- Wave grid: 73 latitude by 91 longitude at 0.5 degrees
+- Chosen to contain all of Mexico (14.5 to 32.7 north, -118.4 to -86.7 east, including Baja and the Yucatan) and the whole Mississippi/Missouri drainage basin (north to about 49.5, west past the Continental Divide in Montana near -113.5, east to the Allegheny headwaters near -77.7).
+- The plotting script marker for this site is the Mississippi River mouth at Head of Passes, `lon_pt = -89.25`, `lat_pt = 29.15`.
+
 ## CDS API / ERA5 Downloads
 
 Official references:
@@ -195,6 +216,36 @@ GRIB-vs-NetCDF test notes:
 - The default `grib_to_netcdf` output had one `time` coordinate and all variables in one file, but did not preserve richer GRIB metadata such as `GRIB_stepType`, forecast reference time, `step`, or `valid_time`.
 - Current decision: do not switch the extraction workflow to GRIB conversion yet. Continue with monthly NetCDF downloads for now, and revisit GRIB only if CDS NetCDF request limits become a blocker.
 
+### Request size test, 2026-09-15
+
+One month (2021-08) of the `surface` group was requested for the full `Gulf_of_Mexico_large` domain via `extract_vars_single_month()` to test whether the enlarged domain hits the NetCDF request-size limit.
+
+- Result: accepted, no size rejection. Request ID `c38ca709-e5b9-46d8-b050-c74bb50e92b6`.
+- Returned 744 times by 145 latitude by 181 longitude with all 13 surface variables, merged out of the CDS ZIP into one file by `_ensure_netcdf_from_cds()`.
+- File size 357 MB; 9.7 minutes wall clock, of which about 50 s queued, 7.5 min CDS processing, and 1.3 min download.
+- Conclusion: the NetCDF request-size limit is not a blocker for a 45 by 36 degree domain at 0.25 degrees with monthly chunking, so GRIB conversion is still unnecessary.
+- Per-request size is set by the domain and the variable group, not by the date range. Shortening the date range reduces the number of requests, not the size of any one request.
+- Fields per monthly request: surface 13 x 744 = 9672, fluxes 8184, moisture 5208, waves 2232.
+- Wall clock, not disk, is the binding cost. At roughly 9.7 min per request run serially, 2020-01 to 2026-08 is 320 requests (about 45 to 55 hours) and 2010-01 to 2026-08 is 800 requests (about 110 to 130 hours).
+- Test artifacts are in `data/processed/tmp/size_test/`.
+
+### NetCDF compression
+
+- CDS monthly files arrive with deflate level 1 plus the shuffle filter and large chunks (372 x 73 x 91 on the test file), achieving about 2.7x compression over raw float32.
+- Merged files previously used deflate 4 with no shuffle, and `ds[var].encoding.clear()` left chunking to the h5netcdf default, which chose long-in-time, tiny-in-space chunks: 433 x 8 x 7 for `Gulf_of_Mexico`, 4541 x 2 x 8 for `Gulf_of_Guinea`. Achieved compression was only about 1.9x.
+- Benchmark on the same 200-hour, 13-variable slice of the test file (raw float32 = 273 MB), timing 20 single-time map slices as the plotting functions read them:
+
+```text
+current (deflate4, no shuffle)      138.4 MB  1.97x  write 8.6s  20 map slices 0.50s
+deflate4 + shuffle                  105.9 MB  2.58x  write 4.5s  20 map slices 0.37s
+deflate4 + shuffle + 24h chunks      96.3 MB  2.83x  write 5.6s  20 map slices 0.30s
+deflate1 + shuffle + 24h chunks     100.2 MB  2.72x  write 3.9s  20 map slices 0.32s
+```
+
+- Change applied 2026-09-15 in `merge_monthly_files()`: encoding now sets `'shuffle': True`, and for 3D variables `chunksizes = (min(24, nt), ny, nx)` so one chunk holds whole maps. `complevel` stays at 4 because write time is not the bottleneck.
+- Effect: about 30 percent smaller merged files, faster writes, and about 1.7x faster map-slice reads. Projected `Gulf_of_Mexico_large` totals fall from about 97 GB to about 66 GB for a 2020 start.
+- Existing merged files keep the old encoding until they are re-merged.
+
 ## Current Plot Modes
 
 The plotting script dispatches these values of `var`:
@@ -221,13 +272,20 @@ The bottom min-MSL/max-wind diagnostic plot uses `time_met = ERA.valid_time` so 
 - Consider skipping the surface `ERA` file load for pure moisture plots if the bottom diagnostic is disabled.
 - `plot_time = np.datetime64('2026-01-15T00:00:00')` is currently repeated in all site branches and may not exist for older files.
 - `lcc_params` is generalized but appears unused by the current plotting functions.
+- `_ensure_netcdf_from_cds()` has `os.remove(zip_path)` commented out, so every request leaves a `.nc` and an equal-sized `.nc.zip`. Over a 320-request run that is roughly 30 GB of stray zips in the surface `tmp` directory, which is kept because the surface stream uses `cleanup_tmp=False`.
+- `plot_map`, `contour_SLP`, `plot_SST` and `plot_SWH` call `contourf` without `extend=`, so values outside the contour levels are left unfilled rather than flagged. The moisture and flux plotting functions do pass `extend`.
+- `plot_SST` contours `skt` (skin temperature, land included) even though the ocean-only `sst` variable is present in the surface files.
+- The `surface`, `moisture` and `fluxes` variable groups overlap: `fluxes` repeats six surface variables and `moisture` repeats two, so those fields are downloaded and stored up to three times (roughly 50 GB of duplication on a 200-month `Gulf_of_Mexico_large` run).
+- `place_labels` is defined only in some site branches and is read via `if 'place_labels' in globals()`, so labels from a previous site persist when switching sites within one interactive session.
 
 ## Validation
 
 After the latest edits, this command passed:
 
 ```bash
-python -m py_compile src/ERA5_map_extraction_2026.py src/ERA5_SAFARI_plots.py
+python -m py_compile src/ERA5_map_extraction_2026.py src/ERA5_SAFARI_plots.py src/ERA5_extraction_tool.py
 ```
+
+The 2026-09-15 CDS request-size test and the compression benchmark were both run in the `NORSE_ASTRAL` environment.
 
 The full plotting/movie workflow has not been run by the agent because it depends on the project mamba environment and does substantial plotting and `ffmpeg` work. The user has run the script in the `NORSE_ASTRAL` environment.
